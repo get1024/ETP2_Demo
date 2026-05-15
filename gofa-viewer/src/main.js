@@ -67,6 +67,8 @@ const materials = {
   vanilla: new THREE.MeshStandardMaterial({ color: 0xfff5d5, roughness: 0.3, metalness: 0.02 }),
   berry: new THREE.MeshStandardMaterial({ color: 0xff9ab5, roughness: 0.34, metalness: 0.01 }),
   steel: new THREE.MeshStandardMaterial({ color: 0x191e25, roughness: 0.32, metalness: 0.36 }),
+  joint: new THREE.MeshStandardMaterial({ color: 0x10151b, roughness: 0.36, metalness: 0.34 }),
+  robotWhite: new THREE.MeshStandardMaterial({ color: 0xf8f8f7, roughness: 0.34, metalness: 0.08 }),
   softLine: new THREE.LineBasicMaterial({ color: 0x2c9b63, transparent: true, opacity: 0.74 }),
   teaseLine: new THREE.LineBasicMaterial({ color: 0xd8322a, transparent: true, opacity: 0.86 }),
   trail: new THREE.LineBasicMaterial({ color: 0xd8322a, transparent: true, opacity: 0.42 }),
@@ -95,6 +97,8 @@ buildIceCreamStand(stage);
 
 const robotRoot = new THREE.Group();
 scene.add(robotRoot);
+const motionArm = createMotionArm();
+scene.add(motionArm.root);
 
 const loader = new GLTFLoader();
 loader.load(
@@ -110,6 +114,8 @@ loader.load(
           color: 0xf8f8f7,
           roughness: 0.34,
           metalness: 0.08,
+          transparent: true,
+          opacity: 0.34,
           envMapIntensity: 0.9,
         });
       }
@@ -132,13 +138,8 @@ scene.add(hand, handHalo);
 const cone = createIceCream();
 scene.add(cone);
 
-const scoopRod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1, 18), materials.steel);
-scoopRod.castShadow = true;
-scene.add(scoopRod);
-
-const scoopHead = new THREE.Mesh(new THREE.SphereGeometry(0.055, 24, 18), materials.steel);
-scoopHead.castShadow = true;
-scene.add(scoopHead);
+const gripper = createGripper();
+scene.add(gripper);
 
 const serveLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
 const serveLine = new THREE.Line(serveLineGeometry, materials.softLine);
@@ -166,7 +167,10 @@ const conePos = coneHome.clone();
 const coneTarget = coneHome.clone();
 const coneVelocity = new THREE.Vector3();
 const dodgeVector = new THREE.Vector3(1, 0, 0);
-const rodAnchor = new THREE.Vector3(0.03, 1.22, -0.18);
+const wristPos = new THREE.Vector3();
+const elbowPos = new THREE.Vector3();
+const shoulderPos = new THREE.Vector3(-0.34, 0.7, -0.1);
+const gripperOffset = new THREE.Vector3(-0.13, 0.02, -0.02);
 
 let dragging = false;
 let attempts = 0;
@@ -259,21 +263,85 @@ function createIceCream() {
   return group;
 }
 
+function createGripper() {
+  const group = new THREE.Group();
+  const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.18, 24), materials.joint);
+  wrist.rotation.z = Math.PI / 2;
+  wrist.castShadow = true;
+  group.add(wrist);
+
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.2), materials.joint);
+  palm.position.x = 0.08;
+  palm.castShadow = true;
+  group.add(palm);
+
+  const fingerGeometry = new THREE.BoxGeometry(0.035, 0.21, 0.035);
+  const topFinger = new THREE.Mesh(fingerGeometry, materials.joint);
+  topFinger.position.set(0.17, 0.065, 0.06);
+  topFinger.rotation.z = -0.18;
+  topFinger.castShadow = true;
+
+  const bottomFinger = topFinger.clone();
+  bottomFinger.position.y = -0.065;
+  bottomFinger.rotation.z = 0.18;
+
+  const sideFinger = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.21), materials.joint);
+  sideFinger.position.set(0.17, 0, -0.075);
+  sideFinger.castShadow = true;
+
+  group.add(topFinger, bottomFinger, sideFinger);
+  return group;
+}
+
+function createMotionArm() {
+  const root = new THREE.Group();
+  root.position.set(-0.42, 0, -0.08);
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.3, 36), materials.joint);
+  base.position.y = 0.15;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  root.add(base);
+
+  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.19, 32, 20), materials.robotWhite);
+  shoulder.position.set(0, 0.52, 0);
+  shoulder.castShadow = true;
+  root.add(shoulder);
+
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.72, 18, 24), materials.robotWhite);
+  upper.castShadow = true;
+  root.add(upper);
+
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.17, 32, 20), materials.joint);
+  elbow.castShadow = true;
+  root.add(elbow);
+
+  const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.68, 18, 24), materials.robotWhite);
+  forearm.castShadow = true;
+  root.add(forearm);
+
+  const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 20), materials.joint);
+  wrist.castShadow = true;
+  root.add(wrist);
+
+  return { root, base, shoulder, upper, elbow, forearm, wrist };
+}
+
 function fitRobot(object) {
   const box = new THREE.Box3().setFromObject(object);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   object.position.sub(center);
   object.position.y += size.y / 2;
-  object.position.x -= 0.43;
-  object.position.z -= 0.24;
-  object.scale.setScalar(1.04);
+  object.position.x -= 0.72;
+  object.position.z -= 0.12;
+  object.scale.setScalar(1.55);
   frameCamera();
 }
 
 function frameCamera() {
-  controls.target.set(0.45, 0.94, 0.12);
-  camera.position.set(3.55, 2.45, 4.35);
+  controls.target.set(0.45, 1.03, 0.14);
+  camera.position.set(3.4, 2.28, 4.05);
   camera.near = 0.01;
   camera.far = 80;
   camera.updateProjectionMatrix();
@@ -330,7 +398,7 @@ function resetDemo() {
   playfulEnergy = 0;
   trailPoints.forEach((point) => point.copy(conePos));
   frameCamera();
-  updatePrompt('按住并拖动', '让手靠近冰淇淋，观察机械臂如何不断线地柔顺避让。', 'idle');
+  updatePrompt('按住并拖动', '让手靠近冰淇淋，观察 GoFa 如何用夹爪带着冰淇淋连续避让。', 'idle');
   updateTelemetry(1.2, '等待接近', 'idle');
 }
 
@@ -365,17 +433,18 @@ function updateInteraction(delta, elapsed) {
   handPos.lerp(handTarget, 1 - Math.pow(0.001, delta));
   handVelocity.copy(handPos).sub(lastHandPos).divideScalar(Math.max(delta, 0.001));
 
-  const distance = handPos.distanceTo(conePos);
+  const grippedConePos = conePos.clone().add(new THREE.Vector3(0.04, 0, 0));
+  const distance = handPos.distanceTo(grippedConePos);
   const closeness = 1 - smoothstep(0.22, 0.88, distance);
   const speed = Math.min(handVelocity.length() / 2.8, 1);
   playfulEnergy += ((closeness * 0.78 + speed * closeness * 0.24) - playfulEnergy) * 0.08;
 
-  if (!handoff && dragging && distance < 0.28 && elapsed - lastDodgeAt > 0.42) {
+  if (!handoff && distance < 0.38 && elapsed - lastDodgeAt > 0.42) {
     attempts += 1;
     lastDodgeAt = elapsed;
   }
 
-  if (!handoff && attempts >= 7 && distance < 0.32) {
+  if (!handoff && attempts >= 5 && distance < 0.42) {
     handoff = true;
   }
 
@@ -389,12 +458,12 @@ function updateInteraction(delta, elapsed) {
   const fakePass = Math.sin(elapsed * 2.35 + attempts) * 0.08;
 
   if (handoff) {
-    coneTarget.copy(handPos).add(new THREE.Vector3(-0.035, 0.08, 0));
+    coneTarget.copy(handPos).add(new THREE.Vector3(-0.11, 0.08, 0));
     updatePrompt('拿到了', '机械臂没有急停，也没有硬碰撞，而是在多次试探后完成柔顺交接。', 'handoff');
     updateTelemetry(distance, '柔顺交接', 'handoff');
-  } else if (!dragging && attempts === 0) {
+  } else if (!dragging && attempts === 0 && distance > 0.68) {
     coneTarget.lerp(coneOffer, 0.028);
-    updatePrompt('按住并拖动', '让手靠近冰淇淋，机械臂会把“躲开”变成一种可玩的交流。', 'idle');
+    updatePrompt('按住并拖动', '让手靠近冰淇淋，GoFa 会把“躲开”变成一种可玩的交流。', 'idle');
     updateTelemetry(distance, '等待接近', 'idle');
   } else {
     coneTarget.copy(coneOffer);
@@ -418,9 +487,9 @@ function updateInteraction(delta, elapsed) {
   coneVelocity.multiplyScalar(0.76);
   conePos.add(coneVelocity.clone().multiplyScalar(delta * 5.2));
 
-  const yawTarget = THREE.MathUtils.clamp((conePos.x - 0.78) * 0.13 + conePos.z * 0.06, -0.14, 0.14);
+  const yawTarget = THREE.MathUtils.clamp((conePos.x - 0.78) * 0.2 + conePos.z * 0.1, -0.24, 0.24);
   robotRoot.rotation.y += (yawTarget - robotRoot.rotation.y) * 0.045;
-  robotRoot.rotation.z = Math.sin(elapsed * 3.3) * playfulEnergy * 0.012;
+  robotRoot.rotation.z = Math.sin(elapsed * 3.3) * playfulEnergy * 0.02;
 }
 
 function updateSceneObjects(elapsed) {
@@ -434,8 +503,12 @@ function updateSceneObjects(elapsed) {
   cone.position.copy(conePos);
   cone.rotation.set(0.16 + Math.sin(elapsed * 6.8) * 0.04, elapsed * 0.55, -0.23 + playfulEnergy * 0.2);
 
-  scoopHead.position.copy(conePos).add(new THREE.Vector3(-0.06, -0.02, -0.04));
-  updateCylinderBetween(scoopRod, rodAnchor, scoopHead.position);
+  updateMotionArm(elapsed);
+
+  gripper.position.copy(conePos).add(gripperOffset);
+  gripper.lookAt(handPos);
+  gripper.rotateY(Math.PI / 2);
+  gripper.rotation.z += Math.sin(elapsed * 5.6) * playfulEnergy * 0.18;
 
   serveLine.geometry.setFromPoints([handPos, conePos]);
   serveLine.material = playfulEnergy > 0.58 ? materials.teaseLine : materials.softLine;
@@ -443,6 +516,36 @@ function updateSceneObjects(elapsed) {
   trailPoints.pop();
   trailPoints.unshift(conePos.clone());
   trailGeometry.setFromPoints(trailPoints);
+}
+
+function updateMotionArm(elapsed) {
+  wristPos.copy(conePos).add(gripperOffset).add(new THREE.Vector3(-0.12, 0.02, -0.02));
+  const localWrist = motionArm.root.worldToLocal(wristPos.clone());
+  const localShoulder = shoulderPos.clone().sub(motionArm.root.position);
+  const reach = localWrist.clone().sub(localShoulder);
+  const mid = localShoulder.clone().add(localWrist).multiplyScalar(0.5);
+  const bow = new THREE.Vector3(-0.12, 0.42 + playfulEnergy * 0.2, -0.26 + Math.sin(elapsed * 4.2) * playfulEnergy * 0.1);
+  elbowPos.copy(mid).add(bow);
+
+  motionArm.shoulder.position.copy(localShoulder);
+  motionArm.elbow.position.copy(elbowPos);
+  motionArm.wrist.position.copy(localWrist);
+
+  updateCapsuleBetween(motionArm.upper, localShoulder, elbowPos);
+  updateCapsuleBetween(motionArm.forearm, elbowPos, localWrist);
+
+  const baseYaw = Math.atan2(reach.x, reach.z);
+  motionArm.base.rotation.y += (baseYaw - motionArm.base.rotation.y) * 0.08;
+  motionArm.root.rotation.y = Math.sin(elapsed * 2.7) * playfulEnergy * 0.035;
+}
+
+function updateCapsuleBetween(mesh, start, end) {
+  const midpoint = start.clone().add(end).multiplyScalar(0.5);
+  const direction = end.clone().sub(start);
+  const length = direction.length();
+  mesh.position.copy(midpoint);
+  mesh.scale.set(1, Math.max(length / 0.82, 0.12), 1);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
 }
 
 function updateCylinderBetween(mesh, start, end) {
