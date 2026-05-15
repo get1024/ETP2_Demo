@@ -1,6 +1,7 @@
 import './styles.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const canvas = document.querySelector('#stage-canvas');
 const sceneHost = document.querySelector('#scene');
@@ -45,10 +46,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f6);
-scene.fog = new THREE.Fog(0xf2f4f6, 7, 14);
+scene.fog = new THREE.Fog(0xf2f4f6, 6, 13);
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
-camera.position.set(5.2, 3.2, 6.2);
+camera.position.set(4.2, 2.8, 5.2);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -68,18 +69,10 @@ const rimLight = new THREE.DirectionalLight(0xdceeff, 1.1);
 rimLight.position.set(-4, 3, -3);
 scene.add(rimLight);
 
-const materials = {
-  white: new THREE.MeshStandardMaterial({ color: 0xf8f8f7, roughness: 0.34, metalness: 0.08 }),
-  black: new THREE.MeshStandardMaterial({ color: 0x11161d, roughness: 0.35, metalness: 0.32 }),
-  red: new THREE.MeshStandardMaterial({ color: 0xff0010, roughness: 0.4, metalness: 0.04 }),
-  floor: new THREE.MeshStandardMaterial({ color: 0xf8f9f9, roughness: 0.72, metalness: 0.02 }),
-  cone: new THREE.MeshStandardMaterial({ color: 0xc98543, roughness: 0.55, metalness: 0.02 }),
-  vanilla: new THREE.MeshStandardMaterial({ color: 0xfff5d5, roughness: 0.3, metalness: 0.02 }),
-  berry: new THREE.MeshStandardMaterial({ color: 0xff9ab5, roughness: 0.34, metalness: 0.01 }),
-  label: new THREE.MeshBasicMaterial({ color: 0xff0010, transparent: true, opacity: 0.72 }),
-};
-
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), materials.floor);
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(9, 9),
+  new THREE.MeshStandardMaterial({ color: 0xf8f9f9, roughness: 0.72, metalness: 0.02 }),
+);
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
@@ -98,8 +91,24 @@ workRing.rotation.x = -Math.PI / 2;
 workRing.position.y = 0.018;
 scene.add(workRing);
 
-const robot = createGoFaRig();
+const loader = new GLTFLoader();
+// Pivots are in the original ABB CAD coordinate system. The root rotates CAD Z-up
+// into Three.js Y-up, while each link mesh keeps its real downloaded GoFa geometry.
+const pivots = [
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0.214),
+  new THREE.Vector3(0, 0, 0.365),
+  new THREE.Vector3(0, -0.145, 1.02),
+  new THREE.Vector3(0.097, 0.04, 1.155),
+  new THREE.Vector3(0.504, -0.01, 1.194),
+  new THREE.Vector3(0.619, 0, 1.235),
+];
+
+const robot = createGoFaCadRig();
 scene.add(robot.root);
+loadGoFaLinks(robot).catch((error) => {
+  console.error('Failed to load real GoFa CAD links:', error);
+});
 
 const appState = {
   current: [0, -28, 62, 0, 36, 0],
@@ -119,148 +128,81 @@ const appState = {
   log: [],
 };
 
-function createGoFaRig() {
+function createGoFaCadRig() {
   const root = new THREE.Group();
-  root.position.set(-0.35, 0, -0.05);
+  root.name = 'GoFa_CRB15000_CAD_Rig';
+  root.position.set(-0.62, 0.02, 0.05);
+  root.rotation.x = -Math.PI / 2;
+  root.scale.setScalar(1.62);
 
   const j1 = new THREE.Group();
+  j1.name = 'J1';
   root.add(j1);
 
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.52, 0.34, 48), materials.black);
-  base.position.y = 0.17;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  j1.add(base);
+  const j2 = makeJointGroup(j1, 'J2', pivots[2], pivots[0]);
+  const j3 = makeJointGroup(j2, 'J3', pivots[3], pivots[2]);
+  const j4 = makeJointGroup(j3, 'J4', pivots[4], pivots[3]);
+  const j5 = makeJointGroup(j4, 'J5', pivots[5], pivots[4]);
+  const j6 = makeJointGroup(j5, 'J6', pivots[6], pivots[5]);
 
-  const j2 = new THREE.Group();
-  j2.position.set(0, 0.45, 0);
-  j1.add(j2);
-  j2.add(jointSphere(0.23, materials.white));
+  const toolFrame = new THREE.AxesHelper(0.16);
+  toolFrame.position.set(0.08, 0, 0);
+  j6.add(toolFrame);
 
-  const upperLink = linkCapsule(0.13, 0.82, materials.white);
-  upperLink.position.y = 0.45;
-  j2.add(upperLink);
+  const tcp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.018, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xff0010 }),
+  );
+  tcp.position.set(0.1, 0, 0);
+  j6.add(tcp);
 
-  const j3 = new THREE.Group();
-  j3.position.set(0, 0.94, 0);
-  j2.add(j3);
-  j3.add(jointSphere(0.2, materials.black));
-
-  const forearm = linkCapsule(0.1, 0.8, materials.white);
-  forearm.rotation.z = Math.PI / 2;
-  forearm.position.x = 0.43;
-  j3.add(forearm);
-
-  const j4 = new THREE.Group();
-  j4.position.set(0.88, 0, 0);
-  j3.add(j4);
-  j4.add(jointSphere(0.16, materials.black));
-
-  const wristLink = linkCapsule(0.07, 0.36, materials.white);
-  wristLink.rotation.z = Math.PI / 2;
-  wristLink.position.x = 0.22;
-  j4.add(wristLink);
-
-  const j5 = new THREE.Group();
-  j5.position.set(0.46, 0, 0);
-  j4.add(j5);
-  j5.add(jointSphere(0.13, materials.black));
-
-  const j6 = new THREE.Group();
-  j6.position.set(0.2, 0, 0);
-  j5.add(j6);
-
-  const tool = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.16, 24), materials.black);
-  tool.rotation.z = Math.PI / 2;
-  tool.castShadow = true;
-  j6.add(tool);
-
-  const gripper = createGripper();
-  gripper.position.x = 0.19;
-  j6.add(gripper);
-
-  const iceCream = createIceCream();
-  iceCream.position.set(0.38, 0, 0);
-  iceCream.rotation.z = -Math.PI / 2;
-  j6.add(iceCream);
-
-  const labelRing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.008, 8, 96), materials.label);
-  labelRing.rotation.x = Math.PI / 2;
-  labelRing.position.y = 0.03;
-  root.add(labelRing);
-
-  return { root, j1, j2, j3, j4, j5, j6, gripper, iceCream };
+  return { root, j1, j2, j3, j4, j5, j6 };
 }
 
-function jointSphere(radius, material) {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 36, 24), material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-function linkCapsule(radius, length, material) {
-  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 20, 32), material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-function createGripper() {
+function makeJointGroup(parent, name, absolutePivot, parentPivot) {
   const group = new THREE.Group();
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.22), materials.black);
-  palm.position.x = 0.08;
-  palm.castShadow = true;
-  group.add(palm);
-
-  const fingerGeometry = new THREE.BoxGeometry(0.035, 0.23, 0.04);
-  const upper = new THREE.Mesh(fingerGeometry, materials.black);
-  upper.position.set(0.2, 0.07, 0.06);
-  upper.rotation.z = -0.18;
-  upper.castShadow = true;
-  group.add(upper);
-
-  const lower = upper.clone();
-  lower.position.y = -0.07;
-  lower.rotation.z = 0.18;
-  group.add(lower);
-  group.userData.upper = upper;
-  group.userData.lower = lower;
+  group.name = name;
+  group.position.copy(absolutePivot).sub(parentPivot);
+  parent.add(group);
   return group;
 }
 
-function createIceCream() {
-  const group = new THREE.Group();
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.105, 0.34, 32), materials.cone);
-  cone.rotation.x = Math.PI;
-  cone.position.y = -0.17;
-  cone.castShadow = true;
-  group.add(cone);
+async function loadGoFaLinks(rig) {
+  const linkTargets = [
+    { index: 0, group: rig.j1, pivot: pivots[0] },
+    { index: 1, group: rig.j1, pivot: pivots[0] },
+    { index: 2, group: rig.j2, pivot: pivots[2] },
+    { index: 3, group: rig.j3, pivot: pivots[3] },
+    { index: 4, group: rig.j4, pivot: pivots[4] },
+    { index: 5, group: rig.j5, pivot: pivots[5] },
+    { index: 6, group: rig.j6, pivot: pivots[6] },
+  ];
 
-  const scoopA = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 20), materials.vanilla);
-  scoopA.position.y = 0.03;
-  scoopA.castShadow = true;
-  group.add(scoopA);
+  await Promise.all(linkTargets.map(async ({ index, group, pivot }) => {
+    const gltf = await loader.loadAsync(`/models/gofa-links/link0${index}.glb`);
+    const link = gltf.scene;
+    link.name = `ABB_GoFa_LINK0${index}`;
+    link.position.copy(pivot).multiplyScalar(-1);
+    link.traverse((node) => {
+      if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    });
+    group.add(link);
+  }));
 
-  const scoopB = new THREE.Mesh(new THREE.SphereGeometry(0.105, 32, 20), materials.berry);
-  scoopB.position.set(0.02, 0.15, 0.02);
-  scoopB.castShadow = true;
-  group.add(scoopB);
-  return group;
+  document.body.classList.add('model-ready');
 }
 
 function applyJointAngles(angles) {
   const rad = angles.map(THREE.MathUtils.degToRad);
-  robot.j1.rotation.y = rad[0];
-  robot.j2.rotation.z = rad[1];
-  robot.j3.rotation.z = rad[2];
+  robot.j1.rotation.z = rad[0];
+  robot.j2.rotation.x = rad[1];
+  robot.j3.rotation.x = rad[2];
   robot.j4.rotation.x = rad[3];
-  robot.j5.rotation.z = rad[4];
+  robot.j5.rotation.y = rad[4];
   robot.j6.rotation.x = rad[5];
-
-  const openAmount = appState.gripper === 'open' ? 0.055 : 0.018;
-  robot.gripper.userData.upper.position.y = 0.06 + openAmount;
-  robot.gripper.userData.lower.position.y = -0.06 - openAmount;
 }
 
 function updateUi() {
@@ -304,7 +246,6 @@ async function sendCommand(command) {
 
 function mergeState(nextState) {
   appState.target = [...nextState.target];
-  appState.joints = [...nextState.joints];
   appState.limits = [...nextState.limits];
   appState.speed = nextState.speed;
   appState.gripper = nextState.gripper;

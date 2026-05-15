@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "convert": "node tools/convert-step-to-glb.mjs",
+    "convert:links": "node tools/convert-gofa-links-to-glb.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1"
