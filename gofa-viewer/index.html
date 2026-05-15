@@ -3,87 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GoFa Ice Cream Handoff</title>
+    <title>GoFa Axis Command Console</title>
   </head>
   <body>
     <main id="app">
       <aside class="panel left-panel">
         <header class="brand-block">
           <span>ABB / GoFa CRB 15000</span>
-          <h1>Ice Cream Handoff</h1>
-          <p>一个关于“不是急停，而是继续互动”的人机协作小游戏。</p>
+          <h1>Axis Command Console</h1>
+          <p>前台输入指令，本地后台解析后驱动 J1-J6 六轴运动。</p>
         </header>
 
         <section class="glass-card live-card">
-          <span class="eyebrow">INTERACTION</span>
-          <h2 id="prompt-title">按住并拖动</h2>
-          <p id="prompt-detail">用鼠标拖动蓝色手掌去拿冰淇淋，GoFa 会用末端夹爪直接夹着它靠近你，又轻轻躲开你。</p>
+          <span class="eyebrow">COMMAND INPUT</span>
+          <form id="command-form">
+            <input id="command-input" autocomplete="off" spellcheck="false" value="ready" />
+            <button type="submit">发送</button>
+          </form>
+          <p id="command-help">例：J1 30 J2 -45、move 0 -30 60 0 45 0、home、ready、serve、tease、open、close，也可以输入“递给我 / 躲开 / 回零”。</p>
         </section>
 
         <section class="glass-card">
-          <span class="eyebrow">PLAY LOOP</span>
-          <ol class="loop-list">
-            <li><b>1</b><span>蓝色手掌代表人的手。</span></li>
-            <li><b>2</b><span>靠近冰淇淋时，GoFa 不急停。</span></li>
-            <li><b>3</b><span>夹爪带着冰淇淋后撤、侧滑、抬高，像土耳其冰淇淋师傅一样“逗你”。</span></li>
-            <li><b>4</b><span>多次试探后，它会顺势完成交接。</span></li>
-          </ol>
+          <span class="eyebrow">PRESETS</span>
+          <div class="preset-grid">
+            <button data-command="home">home</button>
+            <button data-command="ready">ready</button>
+            <button data-command="serve">serve</button>
+            <button data-command="tease">tease</button>
+            <button data-command="open">open</button>
+            <button data-command="close">close</button>
+          </div>
         </section>
 
-        <section class="glass-card compact">
-          <span class="eyebrow">MODE</span>
-          <h3>Compliant Play</h3>
-          <p>用游戏化动作表达柔顺协作：安全不等于中断，GoFa 的运动可以顺着人的手势继续完成互动。</p>
+        <section class="glass-card log-card">
+          <span class="eyebrow">BACKEND LOG</span>
+          <ol id="command-log"></ol>
         </section>
       </aside>
 
-      <section id="scene" aria-label="GoFa ice cream handoff interaction">
+      <section id="scene" aria-label="GoFa six axis command stage">
         <canvas id="stage-canvas"></canvas>
       </section>
 
       <aside class="panel right-panel">
         <section class="glass-card telemetry">
           <span class="eyebrow">LIVE STATE</span>
-          <div class="big-state" id="state-label">等待接近</div>
+          <div class="big-state" id="state-label">idle</div>
           <div class="meter">
-            <span>手-冰淇淋距离</span>
-            <strong id="distance-label">--</strong>
-            <i><em id="distance-bar"></em></i>
+            <span>Last command</span>
+            <strong id="last-command">home</strong>
+            <i><em id="motion-bar"></em></i>
           </div>
+        </section>
+
+        <section class="glass-card axis-panel">
+          <span class="eyebrow">JOINT TARGETS</span>
+          <div id="axis-list"></div>
         </section>
 
         <section class="glass-card metric-grid">
           <div>
-            <span>尝试次数</span>
-            <strong id="attempt-label">0</strong>
+            <span>速度</span>
+            <strong id="speed-label">90</strong>
           </div>
           <div>
-            <span>柔顺响应</span>
-            <strong id="compliance-label">0%</strong>
+            <span>夹爪</span>
+            <strong id="gripper-label">closed</strong>
           </div>
           <div>
-            <span>交互节奏</span>
-            <strong id="tempo-label">idle</strong>
+            <span>控制源</span>
+            <strong>API</strong>
           </div>
           <div>
-            <span>安全策略</span>
-            <strong>soft</strong>
+            <span>轴数</span>
+            <strong>6</strong>
           </div>
-        </section>
-
-        <section class="glass-card">
-          <span class="eyebrow">ROBOT INTENT</span>
-          <ul class="intent-list">
-            <li id="intent-offer" class="active">主动递近</li>
-            <li id="intent-tease">贴近后撤</li>
-            <li id="intent-lift">抬高手腕</li>
-            <li id="intent-handoff">柔顺交接</li>
-          </ul>
-        </section>
-
-        <section class="glass-card controls">
-          <button id="reset-demo" type="button">重置</button>
-          <button id="fit-view" type="button">视角</button>
         </section>
       </aside>
     </main>

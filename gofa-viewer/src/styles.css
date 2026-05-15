@@ -20,7 +20,8 @@ body {
   overflow: hidden;
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -28,11 +29,11 @@ button {
   width: 100vw;
   height: 100vh;
   display: grid;
-  grid-template-columns: 318px minmax(520px, 1fr) 356px;
+  grid-template-columns: 340px minmax(520px, 1fr) 382px;
   gap: 9px;
   padding: 9px;
   background:
-    radial-gradient(circle at 48% 18%, rgba(255, 255, 255, 0.94), transparent 34%),
+    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.96), transparent 34%),
     linear-gradient(135deg, #ffffff, #eef2f5 48%, #e6ebf0);
 }
 
@@ -47,7 +48,7 @@ button {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   padding: 9px;
   background: rgba(249, 251, 253, 0.6);
   backdrop-filter: blur(20px) saturate(1.25);
@@ -55,14 +56,8 @@ button {
 }
 
 #scene {
-  position: relative;
   overflow: hidden;
-  cursor: grab;
   background: #f2f4f6;
-}
-
-#scene:active {
-  cursor: grabbing;
 }
 
 #scene canvas {
@@ -92,14 +87,12 @@ button {
   color: var(--abb-red-dark);
   font-size: 11px;
   font-weight: 850;
-  letter-spacing: 0;
 }
 
 .brand-block h1 {
   margin: 6px 0 0;
   font-size: 28px;
   line-height: 1;
-  letter-spacing: 0;
 }
 
 .brand-block p,
@@ -107,7 +100,7 @@ button {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.52;
+  line-height: 1.5;
 }
 
 .glass-card {
@@ -118,59 +111,90 @@ button {
   border-left: 4px solid var(--abb-red);
 }
 
-.glass-card h2,
-.glass-card h3 {
-  margin: 7px 0 0;
-  line-height: 1.1;
-}
-
-.glass-card h2 {
-  font-size: 22px;
-}
-
-.glass-card h3 {
-  font-size: 18px;
-}
-
-.loop-list {
+#command-form {
   display: grid;
+  grid-template-columns: 1fr 72px;
   gap: 8px;
+  margin-top: 12px;
+}
+
+#command-input {
+  height: 40px;
+  min-width: 0;
+  border: 1px solid rgba(170, 180, 190, 0.8);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+button {
+  border: 1px solid rgba(166, 177, 188, 0.8);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--abb-red);
+  color: var(--abb-red-dark);
+}
+
+#command-form button {
+  height: 40px;
+}
+
+#command-help.error {
+  color: var(--abb-red-dark);
+  font-weight: 800;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preset-grid button {
+  height: 38px;
+}
+
+.log-card {
+  min-height: 0;
+  flex: 1;
+}
+
+#command-log {
+  display: grid;
+  gap: 6px;
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
+  max-height: 260px;
+  overflow: auto;
 }
 
-.loop-list li {
+#command-log li {
   display: grid;
-  grid-template-columns: 30px 1fr;
-  gap: 9px;
-  align-items: start;
-  min-height: 34px;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
   padding: 8px;
-  border: 1px solid rgba(193, 201, 209, 0.58);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.56);
-}
-
-.loop-list b {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: #ffffff;
+  border: 1px solid rgba(194, 202, 210, 0.5);
+  background: rgba(255, 255, 255, 0.58);
   font-size: 12px;
 }
 
-.loop-list span {
-  color: #303942;
-  font-size: 13px;
-  line-height: 1.42;
+#command-log li.error {
+  border-color: rgba(255, 0, 15, 0.32);
 }
 
-.compact {
-  margin-top: auto;
+#command-log time {
+  color: var(--muted);
 }
 
 .telemetry {
@@ -181,13 +205,13 @@ button {
 
 .big-state {
   margin-top: 8px;
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 900;
   line-height: 1;
 }
 
 .meter {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .meter span,
@@ -201,7 +225,9 @@ button {
 .meter strong {
   display: block;
   margin-top: 4px;
-  font-size: 26px;
+  min-height: 31px;
+  font-size: 20px;
+  word-break: break-word;
 }
 
 .meter i {
@@ -223,6 +249,49 @@ button {
   transition: transform 120ms linear;
 }
 
+.axis-panel {
+  min-height: 0;
+}
+
+#axis-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.axis-row {
+  display: grid;
+  grid-template-columns: 112px 1fr 52px;
+  gap: 9px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid rgba(194, 202, 210, 0.5);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.axis-row b {
+  display: block;
+  font-size: 12px;
+}
+
+.axis-row span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.axis-row strong {
+  text-align: right;
+  font-size: 13px;
+}
+
+meter {
+  width: 100%;
+  height: 10px;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -230,7 +299,7 @@ button {
 }
 
 .metric-grid div {
-  min-height: 72px;
+  min-height: 62px;
   padding: 11px;
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.58);
@@ -239,105 +308,13 @@ button {
 
 .metric-grid strong {
   display: block;
-  margin-top: 8px;
-  font-size: 24px;
+  margin-top: 7px;
+  font-size: 20px;
   line-height: 1;
-}
-
-.intent-list {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.intent-list li {
-  position: relative;
-  min-height: 34px;
-  padding: 8px 10px 8px 28px;
-  border: 1px solid rgba(190, 199, 208, 0.56);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.55);
-  color: #5d6874;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.intent-list li::before {
-  content: "";
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #b6c0cb;
-  transform: translateY(-50%);
-}
-
-.intent-list .active {
-  color: var(--ink);
-  border-color: rgba(255, 0, 15, 0.32);
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.intent-list .active::before {
-  background: var(--abb-red);
-  box-shadow: 0 0 0 5px rgba(255, 0, 15, 0.12);
-}
-
-.controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.controls button {
-  height: 40px;
-  border: 1px solid rgba(166, 177, 188, 0.8);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--ink);
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.controls button:hover {
-  border-color: var(--abb-red);
-  color: var(--abb-red-dark);
-}
-
-body[data-moment="tease"] .live-card,
-body[data-moment="tease"] .telemetry {
-  border-color: rgba(255, 0, 15, 0.36);
-}
-
-body[data-moment="handoff"] .live-card,
-body[data-moment="handoff"] .telemetry {
-  border-color: rgba(25, 129, 75, 0.38);
-}
-
-body[data-moment="handoff"] #state-label,
-body[data-moment="handoff"] #prompt-title {
-  color: #19814b;
-}
-
-.load-error::after {
-  content: "GoFa 模型加载失败";
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  color: var(--abb-red-dark);
-  font-weight: 850;
-  background: rgba(255, 255, 255, 0.78);
 }
 
 @media (max-width: 1180px) {
   #app {
-    grid-template-columns: 280px minmax(460px, 1fr) 306px;
+    grid-template-columns: 300px minmax(440px, 1fr) 330px;
   }
 }

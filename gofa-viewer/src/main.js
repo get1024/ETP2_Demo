@@ -1,28 +1,41 @@
 import './styles.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-const sceneHost = document.querySelector('#scene');
-const promptTitle = document.querySelector('#prompt-title');
-const promptDetail = document.querySelector('#prompt-detail');
-const resetButton = document.querySelector('#reset-demo');
-const fitButton = document.querySelector('#fit-view');
 const canvas = document.querySelector('#stage-canvas');
+const sceneHost = document.querySelector('#scene');
+const commandForm = document.querySelector('#command-form');
+const commandInput = document.querySelector('#command-input');
+const commandHelp = document.querySelector('#command-help');
+const commandLog = document.querySelector('#command-log');
+const axisList = document.querySelector('#axis-list');
 const ui = {
   state: document.querySelector('#state-label'),
-  distance: document.querySelector('#distance-label'),
-  distanceBar: document.querySelector('#distance-bar'),
-  attempts: document.querySelector('#attempt-label'),
-  compliance: document.querySelector('#compliance-label'),
-  tempo: document.querySelector('#tempo-label'),
-  intents: {
-    offer: document.querySelector('#intent-offer'),
-    tease: document.querySelector('#intent-tease'),
-    lift: document.querySelector('#intent-lift'),
-    handoff: document.querySelector('#intent-handoff'),
-  },
+  lastCommand: document.querySelector('#last-command'),
+  motionBar: document.querySelector('#motion-bar'),
+  speed: document.querySelector('#speed-label'),
+  gripper: document.querySelector('#gripper-label'),
 };
+
+const axisNames = ['J1 Base', 'J2 Shoulder', 'J3 Elbow', 'J4 Wrist Roll', 'J5 Wrist Pitch', 'J6 Tool Roll'];
+const axisRows = axisNames.map((name, index) => {
+  const row = document.createElement('div');
+  row.className = 'axis-row';
+  row.innerHTML = `
+    <div>
+      <b>${name}</b>
+      <span id="axis-current-${index}">0.0 deg</span>
+    </div>
+    <meter id="axis-meter-${index}" min="-180" max="180" value="0"></meter>
+    <strong id="axis-target-${index}">0.0</strong>
+  `;
+  axisList.append(row);
+  return {
+    current: row.querySelector(`#axis-current-${index}`),
+    meter: row.querySelector(`#axis-meter-${index}`),
+    target: row.querySelector(`#axis-target-${index}`),
+  };
+});
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -32,46 +45,38 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f6);
-scene.fog = new THREE.Fog(0xf2f4f6, 5.8, 12.5);
+scene.fog = new THREE.Fog(0xf2f4f6, 7, 14);
 
-const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
-camera.position.set(3.6, 2.55, 4.55);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+camera.position.set(5.2, 3.2, 6.2);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.target.set(0.35, 1.05, 0);
 controls.maxPolarAngle = Math.PI / 2.05;
-controls.target.set(0.42, 0.92, 0.12);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x9da8b4, 2.15));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9ca8b5, 2.0));
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.75);
-keyLight.position.set(4.8, 6.3, 3.7);
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+keyLight.position.set(4.8, 6.5, 4.2);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(2048, 2048);
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0xd7eeff, 1.15);
-rimLight.position.set(-4.2, 3.2, -3.8);
+const rimLight = new THREE.DirectionalLight(0xdceeff, 1.1);
+rimLight.position.set(-4, 3, -3);
 scene.add(rimLight);
 
 const materials = {
+  white: new THREE.MeshStandardMaterial({ color: 0xf8f8f7, roughness: 0.34, metalness: 0.08 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x11161d, roughness: 0.35, metalness: 0.32 }),
+  red: new THREE.MeshStandardMaterial({ color: 0xff0010, roughness: 0.4, metalness: 0.04 }),
   floor: new THREE.MeshStandardMaterial({ color: 0xf8f9f9, roughness: 0.72, metalness: 0.02 }),
-  counter: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.04 }),
-  counterEdge: new THREE.MeshStandardMaterial({ color: 0xd8322a, roughness: 0.42, metalness: 0.03 }),
-  shadow: new THREE.ShadowMaterial({ color: 0x65717c, opacity: 0.18 }),
-  hand: new THREE.MeshStandardMaterial({ color: 0x2d7dd2, roughness: 0.44, metalness: 0.04 }),
-  handGlow: new THREE.MeshBasicMaterial({ color: 0x2d7dd2, transparent: true, opacity: 0.14, side: THREE.DoubleSide }),
   cone: new THREE.MeshStandardMaterial({ color: 0xc98543, roughness: 0.55, metalness: 0.02 }),
-  waffle: new THREE.MeshBasicMaterial({ color: 0x87542c, transparent: true, opacity: 0.42 }),
   vanilla: new THREE.MeshStandardMaterial({ color: 0xfff5d5, roughness: 0.3, metalness: 0.02 }),
   berry: new THREE.MeshStandardMaterial({ color: 0xff9ab5, roughness: 0.34, metalness: 0.01 }),
-  steel: new THREE.MeshStandardMaterial({ color: 0x191e25, roughness: 0.32, metalness: 0.36 }),
-  joint: new THREE.MeshStandardMaterial({ color: 0x10151b, roughness: 0.36, metalness: 0.34 }),
-  robotWhite: new THREE.MeshStandardMaterial({ color: 0xf8f8f7, roughness: 0.34, metalness: 0.08 }),
-  softLine: new THREE.LineBasicMaterial({ color: 0x2c9b63, transparent: true, opacity: 0.74 }),
-  teaseLine: new THREE.LineBasicMaterial({ color: 0xd8322a, transparent: true, opacity: 0.86 }),
-  trail: new THREE.LineBasicMaterial({ color: 0xd8322a, transparent: true, opacity: 0.42 }),
+  label: new THREE.MeshBasicMaterial({ color: 0xff0010, transparent: true, opacity: 0.72 }),
 };
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), materials.floor);
@@ -79,483 +84,257 @@ floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-const contactShadow = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), materials.shadow);
-contactShadow.rotation.x = -Math.PI / 2;
-contactShadow.position.y = 0.004;
-contactShadow.receiveShadow = true;
-scene.add(contactShadow);
-
-const grid = new THREE.GridHelper(9, 30, 0xd9c35a, 0xdbe2e8);
+const grid = new THREE.GridHelper(9, 30, 0xd8c65b, 0xdce2e8);
 grid.material.transparent = true;
-grid.material.opacity = 0.48;
-grid.position.y = 0.012;
+grid.material.opacity = 0.52;
+grid.position.y = 0.01;
 scene.add(grid);
 
-const stage = new THREE.Group();
-scene.add(stage);
-buildIceCreamStand(stage);
-
-const robotRoot = new THREE.Group();
-scene.add(robotRoot);
-const motionArm = createMotionArm();
-scene.add(motionArm.root);
-
-const loader = new GLTFLoader();
-loader.load(
-  '/models/gofa-crb15000.glb',
-  (gltf) => {
-    const robotModel = gltf.scene;
-    robotModel.rotation.x = -Math.PI / 2;
-    robotModel.traverse((node) => {
-      if (node.isMesh) {
-        node.castShadow = true;
-        node.receiveShadow = true;
-        node.material = new THREE.MeshStandardMaterial({
-          color: 0xf8f8f7,
-          roughness: 0.34,
-          metalness: 0.08,
-          transparent: true,
-          opacity: 0.34,
-          envMapIntensity: 0.9,
-        });
-      }
-    });
-    robotRoot.add(robotModel);
-    fitRobot(robotRoot);
-    document.body.classList.add('model-ready');
-  },
-  undefined,
-  (error) => {
-    sceneHost.classList.add('load-error');
-    console.error('Failed to load GoFa GLB:', error);
-  },
+const workRing = new THREE.Mesh(
+  new THREE.RingGeometry(1.75, 1.77, 128),
+  new THREE.MeshBasicMaterial({ color: 0xff0010, transparent: true, opacity: 0.18 }),
 );
+workRing.rotation.x = -Math.PI / 2;
+workRing.position.y = 0.018;
+scene.add(workRing);
 
-const hand = createHand();
-const handHalo = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.3, 64), materials.handGlow);
-scene.add(hand, handHalo);
+const robot = createGoFaRig();
+scene.add(robot.root);
 
-const cone = createIceCream();
-scene.add(cone);
+const appState = {
+  current: [0, -28, 62, 0, 36, 0],
+  target: [0, -28, 62, 0, 36, 0],
+  limits: [
+    [-180, 180],
+    [-120, 120],
+    [-160, 160],
+    [-180, 180],
+    [-120, 120],
+    [-360, 360],
+  ],
+  speed: 90,
+  gripper: 'closed',
+  mode: 'idle',
+  lastCommand: 'home',
+  log: [],
+};
 
-const gripper = createGripper();
-scene.add(gripper);
+function createGoFaRig() {
+  const root = new THREE.Group();
+  root.position.set(-0.35, 0, -0.05);
 
-const serveLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-const serveLine = new THREE.Line(serveLineGeometry, materials.softLine);
-scene.add(serveLine);
+  const j1 = new THREE.Group();
+  root.add(j1);
 
-const trailPoints = Array.from({ length: 54 }, () => new THREE.Vector3());
-const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
-const trail = new THREE.Line(trailGeometry, materials.trail);
-scene.add(trail);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.52, 0.34, 48), materials.black);
+  base.position.y = 0.17;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  j1.add(base);
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const dragPlane = new THREE.Plane();
-const planePoint = new THREE.Vector3(1.22, 1.18, 0.44);
-const cameraForward = new THREE.Vector3();
+  const j2 = new THREE.Group();
+  j2.position.set(0, 0.45, 0);
+  j1.add(j2);
+  j2.add(jointSphere(0.23, materials.white));
 
-const handTarget = new THREE.Vector3(1.82, 1.05, 0.9);
-const handPos = handTarget.clone();
-const lastHandPos = handTarget.clone();
-const handVelocity = new THREE.Vector3();
+  const upperLink = linkCapsule(0.13, 0.82, materials.white);
+  upperLink.position.y = 0.45;
+  j2.add(upperLink);
 
-const coneHome = new THREE.Vector3(0.62, 1.18, 0.03);
-const coneOffer = new THREE.Vector3(1.12, 1.18, 0.32);
-const conePos = coneHome.clone();
-const coneTarget = coneHome.clone();
-const coneVelocity = new THREE.Vector3();
-const dodgeVector = new THREE.Vector3(1, 0, 0);
-const wristPos = new THREE.Vector3();
-const elbowPos = new THREE.Vector3();
-const shoulderPos = new THREE.Vector3(-0.34, 0.7, -0.1);
-const gripperOffset = new THREE.Vector3(-0.13, 0.02, -0.02);
+  const j3 = new THREE.Group();
+  j3.position.set(0, 0.94, 0);
+  j2.add(j3);
+  j3.add(jointSphere(0.2, materials.black));
 
-let dragging = false;
-let attempts = 0;
-let lastDodgeAt = 0;
-let handoff = false;
-let playfulEnergy = 0;
+  const forearm = linkCapsule(0.1, 0.8, materials.white);
+  forearm.rotation.z = Math.PI / 2;
+  forearm.position.x = 0.43;
+  j3.add(forearm);
 
-const clock = new THREE.Clock();
+  const j4 = new THREE.Group();
+  j4.position.set(0.88, 0, 0);
+  j3.add(j4);
+  j4.add(jointSphere(0.16, materials.black));
 
-function buildIceCreamStand(group) {
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.58, 0.62), materials.counter);
-  counter.position.set(-0.18, 0.29, -1.02);
-  counter.castShadow = true;
-  counter.receiveShadow = true;
-  group.add(counter);
+  const wristLink = linkCapsule(0.07, 0.36, materials.white);
+  wristLink.rotation.z = Math.PI / 2;
+  wristLink.position.x = 0.22;
+  j4.add(wristLink);
 
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.1, 0.66), materials.counterEdge);
-  stripe.position.set(-0.18, 0.64, -1.02);
-  stripe.castShadow = true;
-  group.add(stripe);
+  const j5 = new THREE.Group();
+  j5.position.set(0.46, 0, 0);
+  j4.add(j5);
+  j5.add(jointSphere(0.13, materials.black));
 
-  const poleLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.1, 12), materials.steel);
-  poleLeft.position.set(-0.92, 1.18, -1.23);
-  const poleRight = poleLeft.clone();
-  poleRight.position.x = 0.56;
-  group.add(poleLeft, poleRight);
+  const j6 = new THREE.Group();
+  j6.position.set(0.2, 0, 0);
+  j5.add(j6);
 
-  for (let i = 0; i < 5; i += 1) {
-    const awningMaterial = i % 2 === 0 ? materials.counterEdge : materials.counter;
-    const awning = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.08, 0.72), awningMaterial);
-    awning.position.set(-0.78 + i * 0.31, 1.78, -1.23);
-    awning.castShadow = true;
-    group.add(awning);
-  }
+  const tool = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.16, 24), materials.black);
+  tool.rotation.z = Math.PI / 2;
+  tool.castShadow = true;
+  j6.add(tool);
 
-  const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.045, 48), materials.counter);
-  tray.position.set(1.55, 0.04, 0.48);
-  tray.castShadow = true;
-  tray.receiveShadow = true;
-  group.add(tray);
+  const gripper = createGripper();
+  gripper.position.x = 0.19;
+  j6.add(gripper);
+
+  const iceCream = createIceCream();
+  iceCream.position.set(0.38, 0, 0);
+  iceCream.rotation.z = -Math.PI / 2;
+  j6.add(iceCream);
+
+  const labelRing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.008, 8, 96), materials.label);
+  labelRing.rotation.x = Math.PI / 2;
+  labelRing.position.y = 0.03;
+  root.add(labelRing);
+
+  return { root, j1, j2, j3, j4, j5, j6, gripper, iceCream };
 }
 
-function createHand() {
+function jointSphere(radius, material) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 36, 24), material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function linkCapsule(radius, length, material) {
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 20, 32), material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function createGripper() {
   const group = new THREE.Group();
-  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 28, 18), materials.hand);
-  palm.scale.set(1.0, 0.58, 0.78);
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.22), materials.black);
+  palm.position.x = 0.08;
   palm.castShadow = true;
   group.add(palm);
 
-  for (let i = 0; i < 4; i += 1) {
-    const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.16, 6, 12), materials.hand);
-    finger.rotation.z = Math.PI / 2;
-    finger.position.set(0.12, 0.012, -0.075 + i * 0.05);
-    finger.castShadow = true;
-    group.add(finger);
-  }
+  const fingerGeometry = new THREE.BoxGeometry(0.035, 0.23, 0.04);
+  const upper = new THREE.Mesh(fingerGeometry, materials.black);
+  upper.position.set(0.2, 0.07, 0.06);
+  upper.rotation.z = -0.18;
+  upper.castShadow = true;
+  group.add(upper);
 
-  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.027, 0.13, 6, 12), materials.hand);
-  thumb.rotation.set(0.2, 0.2, -0.65);
-  thumb.position.set(0.036, -0.012, 0.12);
-  thumb.castShadow = true;
-  group.add(thumb);
+  const lower = upper.clone();
+  lower.position.y = -0.07;
+  lower.rotation.z = 0.18;
+  group.add(lower);
+  group.userData.upper = upper;
+  group.userData.lower = lower;
   return group;
 }
 
 function createIceCream() {
   const group = new THREE.Group();
-  const coneMesh = new THREE.Mesh(new THREE.ConeGeometry(0.105, 0.32, 32), materials.cone);
-  coneMesh.rotation.x = Math.PI;
-  coneMesh.position.y = -0.16;
-  coneMesh.castShadow = true;
-  group.add(coneMesh);
-
-  for (let i = -2; i <= 2; i += 1) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.073 + Math.abs(i) * 0.006, 0.004, 8, 32), materials.waffle);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = -0.17 + i * 0.045;
-    group.add(ring);
-  }
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.105, 0.34, 32), materials.cone);
+  cone.rotation.x = Math.PI;
+  cone.position.y = -0.17;
+  cone.castShadow = true;
+  group.add(cone);
 
   const scoopA = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 20), materials.vanilla);
-  scoopA.position.y = 0.02;
+  scoopA.position.y = 0.03;
   scoopA.castShadow = true;
   group.add(scoopA);
 
   const scoopB = new THREE.Mesh(new THREE.SphereGeometry(0.105, 32, 20), materials.berry);
-  scoopB.position.set(0.015, 0.13, 0.015);
+  scoopB.position.set(0.02, 0.15, 0.02);
   scoopB.castShadow = true;
   group.add(scoopB);
   return group;
 }
 
-function createGripper() {
-  const group = new THREE.Group();
-  const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.18, 24), materials.joint);
-  wrist.rotation.z = Math.PI / 2;
-  wrist.castShadow = true;
-  group.add(wrist);
+function applyJointAngles(angles) {
+  const rad = angles.map(THREE.MathUtils.degToRad);
+  robot.j1.rotation.y = rad[0];
+  robot.j2.rotation.z = rad[1];
+  robot.j3.rotation.z = rad[2];
+  robot.j4.rotation.x = rad[3];
+  robot.j5.rotation.z = rad[4];
+  robot.j6.rotation.x = rad[5];
 
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.2), materials.joint);
-  palm.position.x = 0.08;
-  palm.castShadow = true;
-  group.add(palm);
-
-  const fingerGeometry = new THREE.BoxGeometry(0.035, 0.21, 0.035);
-  const topFinger = new THREE.Mesh(fingerGeometry, materials.joint);
-  topFinger.position.set(0.17, 0.065, 0.06);
-  topFinger.rotation.z = -0.18;
-  topFinger.castShadow = true;
-
-  const bottomFinger = topFinger.clone();
-  bottomFinger.position.y = -0.065;
-  bottomFinger.rotation.z = 0.18;
-
-  const sideFinger = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.21), materials.joint);
-  sideFinger.position.set(0.17, 0, -0.075);
-  sideFinger.castShadow = true;
-
-  group.add(topFinger, bottomFinger, sideFinger);
-  return group;
+  const openAmount = appState.gripper === 'open' ? 0.055 : 0.018;
+  robot.gripper.userData.upper.position.y = 0.06 + openAmount;
+  robot.gripper.userData.lower.position.y = -0.06 - openAmount;
 }
 
-function createMotionArm() {
-  const root = new THREE.Group();
-  root.position.set(-0.42, 0, -0.08);
+function updateUi() {
+  ui.state.textContent = appState.mode;
+  ui.lastCommand.textContent = appState.lastCommand;
+  ui.speed.textContent = `${Math.round(appState.speed)} deg/s`;
+  ui.gripper.textContent = appState.gripper;
 
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.3, 36), materials.joint);
-  base.position.y = 0.15;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  root.add(base);
+  const error = appState.current.reduce((sum, value, index) => sum + Math.abs(appState.target[index] - value), 0);
+  ui.motionBar.style.transform = `scaleX(${Math.min(error / 180, 1)})`;
 
-  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.19, 32, 20), materials.robotWhite);
-  shoulder.position.set(0, 0.52, 0);
-  shoulder.castShadow = true;
-  root.add(shoulder);
+  appState.current.forEach((value, index) => {
+    axisRows[index].current.textContent = `${value.toFixed(1)} deg`;
+    axisRows[index].target.textContent = appState.target[index].toFixed(1);
+    axisRows[index].meter.min = appState.limits[index][0];
+    axisRows[index].meter.max = appState.limits[index][1];
+    axisRows[index].meter.value = value;
+  });
 
-  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.72, 18, 24), materials.robotWhite);
-  upper.castShadow = true;
-  root.add(upper);
-
-  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.17, 32, 20), materials.joint);
-  elbow.castShadow = true;
-  root.add(elbow);
-
-  const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.68, 18, 24), materials.robotWhite);
-  forearm.castShadow = true;
-  root.add(forearm);
-
-  const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 20), materials.joint);
-  wrist.castShadow = true;
-  root.add(wrist);
-
-  return { root, base, shoulder, upper, elbow, forearm, wrist };
+  commandLog.innerHTML = appState.log
+    .map((entry) => `<li class="${entry.type}"><time>${entry.time}</time><span>${entry.text}</span></li>`)
+    .join('');
 }
 
-function fitRobot(object) {
-  const box = new THREE.Box3().setFromObject(object);
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  object.position.sub(center);
-  object.position.y += size.y / 2;
-  object.position.x -= 0.72;
-  object.position.z -= 0.12;
-  object.scale.setScalar(1.55);
-  frameCamera();
-}
-
-function frameCamera() {
-  controls.target.set(0.45, 1.03, 0.14);
-  camera.position.set(3.4, 2.28, 4.05);
-  camera.near = 0.01;
-  camera.far = 80;
-  camera.updateProjectionMatrix();
-  controls.update();
-}
-
-function refreshDragPlane() {
-  camera.getWorldDirection(cameraForward);
-  dragPlane.setFromNormalAndCoplanarPoint(cameraForward.clone().negate(), planePoint);
-}
-
-function updatePointer(event) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const hit = new THREE.Vector3();
-  if (raycaster.ray.intersectPlane(dragPlane, hit)) {
-    handTarget.copy(hit);
-    handTarget.x = THREE.MathUtils.clamp(handTarget.x, 0.46, 2.18);
-    handTarget.y = THREE.MathUtils.clamp(handTarget.y, 0.7, 1.72);
-    handTarget.z = THREE.MathUtils.clamp(handTarget.z, -0.52, 1.28);
-  }
-}
-
-function onPointerDown(event) {
-  dragging = true;
-  controls.enabled = false;
-  sceneHost.setPointerCapture(event.pointerId);
-  refreshDragPlane();
-  updatePointer(event);
-}
-
-function onPointerMove(event) {
-  if (dragging) updatePointer(event);
-}
-
-function onPointerUp(event) {
-  dragging = false;
-  controls.enabled = true;
-  if (sceneHost.hasPointerCapture(event.pointerId)) sceneHost.releasePointerCapture(event.pointerId);
-}
-
-function resetDemo() {
-  handTarget.set(1.82, 1.05, 0.9);
-  handPos.copy(handTarget);
-  lastHandPos.copy(handTarget);
-  conePos.copy(coneHome);
-  coneTarget.copy(coneHome);
-  coneVelocity.set(0, 0, 0);
-  attempts = 0;
-  lastDodgeAt = 0;
-  handoff = false;
-  playfulEnergy = 0;
-  trailPoints.forEach((point) => point.copy(conePos));
-  frameCamera();
-  updatePrompt('按住并拖动', '让手靠近冰淇淋，观察 GoFa 如何用夹爪带着冰淇淋连续避让。', 'idle');
-  updateTelemetry(1.2, '等待接近', 'idle');
-}
-
-function updatePrompt(title, detail, moment) {
-  promptTitle.textContent = title;
-  promptDetail.textContent = detail;
-  document.body.dataset.moment = moment;
-}
-
-function updateTelemetry(distance, state, tempo) {
-  ui.state.textContent = state;
-  ui.distance.textContent = `${distance.toFixed(2)} m`;
-  ui.distanceBar.style.transform = `scaleX(${THREE.MathUtils.clamp(1 - distance / 1.35, 0, 1)})`;
-  ui.attempts.textContent = String(attempts);
-  ui.compliance.textContent = `${Math.round(playfulEnergy * 100)}%`;
-  ui.tempo.textContent = tempo;
-
-  for (const item of Object.values(ui.intents)) item.classList.remove('active');
-  if (handoff) ui.intents.handoff.classList.add('active');
-  else if (playfulEnergy > 0.74) ui.intents.lift.classList.add('active');
-  else if (playfulEnergy > 0.46) ui.intents.tease.classList.add('active');
-  else ui.intents.offer.classList.add('active');
-}
-
-function smoothstep(edge0, edge1, value) {
-  const x = THREE.MathUtils.clamp((value - edge0) / (edge1 - edge0), 0, 1);
-  return x * x * (3 - 2 * x);
-}
-
-function updateInteraction(delta, elapsed) {
-  lastHandPos.copy(handPos);
-  handPos.lerp(handTarget, 1 - Math.pow(0.001, delta));
-  handVelocity.copy(handPos).sub(lastHandPos).divideScalar(Math.max(delta, 0.001));
-
-  const grippedConePos = conePos.clone().add(new THREE.Vector3(0.04, 0, 0));
-  const distance = handPos.distanceTo(grippedConePos);
-  const closeness = 1 - smoothstep(0.22, 0.88, distance);
-  const speed = Math.min(handVelocity.length() / 2.8, 1);
-  playfulEnergy += ((closeness * 0.78 + speed * closeness * 0.24) - playfulEnergy) * 0.08;
-
-  if (!handoff && distance < 0.38 && elapsed - lastDodgeAt > 0.42) {
-    attempts += 1;
-    lastDodgeAt = elapsed;
-  }
-
-  if (!handoff && attempts >= 5 && distance < 0.42) {
-    handoff = true;
-  }
-
-  dodgeVector.copy(conePos).sub(handPos);
-  if (dodgeVector.lengthSq() < 0.0001) dodgeVector.set(1, 0, 0);
-  dodgeVector.normalize();
-
-  const slip = new THREE.Vector3(-dodgeVector.z, 0, dodgeVector.x);
-  const tease = handoff ? 0 : smoothstep(0.94, 0.18, distance);
-  const wave = Math.sin(elapsed * 5.7 + attempts * 0.92);
-  const fakePass = Math.sin(elapsed * 2.35 + attempts) * 0.08;
-
-  if (handoff) {
-    coneTarget.copy(handPos).add(new THREE.Vector3(-0.11, 0.08, 0));
-    updatePrompt('拿到了', '机械臂没有急停，也没有硬碰撞，而是在多次试探后完成柔顺交接。', 'handoff');
-    updateTelemetry(distance, '柔顺交接', 'handoff');
-  } else if (!dragging && attempts === 0 && distance > 0.68) {
-    coneTarget.lerp(coneOffer, 0.028);
-    updatePrompt('按住并拖动', '让手靠近冰淇淋，GoFa 会把“躲开”变成一种可玩的交流。', 'idle');
-    updateTelemetry(distance, '等待接近', 'idle');
+async function sendCommand(command) {
+  const response = await fetch('/api/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command }),
+  });
+  const payload = await response.json();
+  if (!payload.ok) {
+    commandHelp.textContent = payload.error;
+    commandHelp.classList.add('error');
   } else {
-    coneTarget.copy(coneOffer);
-    coneTarget.add(dodgeVector.clone().multiplyScalar(tease * (0.34 + attempts * 0.018)));
-    coneTarget.add(slip.multiplyScalar(tease * (0.18 + wave * 0.08)));
-    coneTarget.y += tease * (0.18 + Math.max(wave, 0) * 0.13) + fakePass;
-    if (closeness > 0.58) {
-      updatePrompt('差一点', '它不是停下来拒绝你，而是继续保持节奏，用小幅退让、侧滑和抬高手腕回应你的动作。', 'tease');
-      updateTelemetry(distance, wave > 0.4 ? '抬高手腕' : '贴近后撤', wave > 0.4 ? 'lift' : 'slip');
-    } else {
-      updatePrompt('靠近试试看', '冰淇淋会主动迎上来，但真正抓住它需要几次来回试探。', 'idle');
-      updateTelemetry(distance, '主动递近', 'offer');
-    }
+    commandHelp.textContent = payload.message;
+    commandHelp.classList.remove('error');
   }
-
-  coneTarget.x = THREE.MathUtils.clamp(coneTarget.x, 0.48, 1.68);
-  coneTarget.y = THREE.MathUtils.clamp(coneTarget.y, 0.88, 1.76);
-  coneTarget.z = THREE.MathUtils.clamp(coneTarget.z, -0.44, 0.92);
-
-  coneVelocity.add(coneTarget.clone().sub(conePos).multiplyScalar(15 * delta));
-  coneVelocity.multiplyScalar(0.76);
-  conePos.add(coneVelocity.clone().multiplyScalar(delta * 5.2));
-
-  const yawTarget = THREE.MathUtils.clamp((conePos.x - 0.78) * 0.2 + conePos.z * 0.1, -0.24, 0.24);
-  robotRoot.rotation.y += (yawTarget - robotRoot.rotation.y) * 0.045;
-  robotRoot.rotation.z = Math.sin(elapsed * 3.3) * playfulEnergy * 0.02;
+  if (payload.state) mergeState(payload.state);
 }
 
-function updateSceneObjects(elapsed) {
-  hand.position.copy(handPos);
-  hand.rotation.set(0.08, -0.55 + Math.sin(elapsed * 2.8) * 0.05, -0.18);
-
-  handHalo.position.copy(handPos);
-  handHalo.rotation.copy(camera.rotation);
-  handHalo.scale.setScalar(1 + playfulEnergy * 0.6);
-
-  cone.position.copy(conePos);
-  cone.rotation.set(0.16 + Math.sin(elapsed * 6.8) * 0.04, elapsed * 0.55, -0.23 + playfulEnergy * 0.2);
-
-  updateMotionArm(elapsed);
-
-  gripper.position.copy(conePos).add(gripperOffset);
-  gripper.lookAt(handPos);
-  gripper.rotateY(Math.PI / 2);
-  gripper.rotation.z += Math.sin(elapsed * 5.6) * playfulEnergy * 0.18;
-
-  serveLine.geometry.setFromPoints([handPos, conePos]);
-  serveLine.material = playfulEnergy > 0.58 ? materials.teaseLine : materials.softLine;
-
-  trailPoints.pop();
-  trailPoints.unshift(conePos.clone());
-  trailGeometry.setFromPoints(trailPoints);
+function mergeState(nextState) {
+  appState.target = [...nextState.target];
+  appState.joints = [...nextState.joints];
+  appState.limits = [...nextState.limits];
+  appState.speed = nextState.speed;
+  appState.gripper = nextState.gripper;
+  appState.mode = nextState.mode;
+  appState.lastCommand = nextState.lastCommand;
+  appState.log = nextState.log;
+  updateUi();
 }
 
-function updateMotionArm(elapsed) {
-  wristPos.copy(conePos).add(gripperOffset).add(new THREE.Vector3(-0.12, 0.02, -0.02));
-  const localWrist = motionArm.root.worldToLocal(wristPos.clone());
-  const localShoulder = shoulderPos.clone().sub(motionArm.root.position);
-  const reach = localWrist.clone().sub(localShoulder);
-  const mid = localShoulder.clone().add(localWrist).multiplyScalar(0.5);
-  const bow = new THREE.Vector3(-0.12, 0.42 + playfulEnergy * 0.2, -0.26 + Math.sin(elapsed * 4.2) * playfulEnergy * 0.1);
-  elbowPos.copy(mid).add(bow);
-
-  motionArm.shoulder.position.copy(localShoulder);
-  motionArm.elbow.position.copy(elbowPos);
-  motionArm.wrist.position.copy(localWrist);
-
-  updateCapsuleBetween(motionArm.upper, localShoulder, elbowPos);
-  updateCapsuleBetween(motionArm.forearm, elbowPos, localWrist);
-
-  const baseYaw = Math.atan2(reach.x, reach.z);
-  motionArm.base.rotation.y += (baseYaw - motionArm.base.rotation.y) * 0.08;
-  motionArm.root.rotation.y = Math.sin(elapsed * 2.7) * playfulEnergy * 0.035;
+function connectEvents() {
+  const events = new EventSource('/api/events');
+  events.onmessage = (event) => mergeState(JSON.parse(event.data));
+  events.onerror = () => {
+    commandHelp.textContent = '后台事件流断开，刷新页面或重启 pnpm dev。';
+    commandHelp.classList.add('error');
+  };
 }
 
-function updateCapsuleBetween(mesh, start, end) {
-  const midpoint = start.clone().add(end).multiplyScalar(0.5);
-  const direction = end.clone().sub(start);
-  const length = direction.length();
-  mesh.position.copy(midpoint);
-  mesh.scale.set(1, Math.max(length / 0.82, 0.12), 1);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-}
+commandForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const command = commandInput.value.trim();
+  if (command) sendCommand(command);
+});
 
-function updateCylinderBetween(mesh, start, end) {
-  const midpoint = start.clone().add(end).multiplyScalar(0.5);
-  const direction = end.clone().sub(start);
-  const length = direction.length();
-  mesh.position.copy(midpoint);
-  mesh.scale.set(1, Math.max(length, 0.001), 1);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-}
+document.querySelectorAll('[data-command]').forEach((button) => {
+  button.addEventListener('click', () => {
+    commandInput.value = button.dataset.command;
+    sendCommand(button.dataset.command);
+  });
+});
 
 function resize() {
   const { width, height } = sceneHost.getBoundingClientRect();
@@ -566,22 +345,26 @@ function resize() {
 
 function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
-  const elapsed = clock.elapsedTime;
-  updateInteraction(delta, elapsed);
-  updateSceneObjects(elapsed);
+  const maxStep = appState.speed * delta;
+
+  appState.current = appState.current.map((value, index) => {
+    const target = appState.target[index];
+    const diff = target - value;
+    if (Math.abs(diff) <= maxStep) return target;
+    return value + Math.sign(diff) * maxStep;
+  });
+
+  applyJointAngles(appState.current);
+  updateUi();
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 
-sceneHost.addEventListener('pointerdown', onPointerDown);
-sceneHost.addEventListener('pointermove', onPointerMove);
-sceneHost.addEventListener('pointerup', onPointerUp);
-sceneHost.addEventListener('pointercancel', onPointerUp);
-resetButton.addEventListener('click', resetDemo);
-fitButton.addEventListener('click', frameCamera);
+const clock = new THREE.Clock();
 window.addEventListener('resize', resize);
-
 resize();
-resetDemo();
+connectEvents();
+applyJointAngles(appState.current);
+updateUi();
 animate();
