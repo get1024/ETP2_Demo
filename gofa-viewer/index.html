@@ -3,80 +3,77 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GoFa Axis Command Console</title>
+    <title>GoFa Flexible Collaboration</title>
   </head>
   <body>
     <main id="app">
       <aside class="panel left-panel">
         <header class="brand-block">
           <span>ABB / GoFa CRB 15000</span>
-          <h1>Axis Command Console</h1>
-          <p>前台输入指令，本地后台解析后驱动 J1-J6 六轴运动。</p>
+          <h1>Flexible Collaboration</h1>
+          <p>GoFa 将面前木块搬运到身后。人的手进入工作区时，不触发急停，而是动态绕开并继续完成任务。</p>
         </header>
 
         <section class="glass-card live-card">
-          <span class="eyebrow">COMMAND INPUT</span>
-          <form id="command-form">
-            <input id="command-input" autocomplete="off" spellcheck="false" value="ready" />
-            <button type="submit">发送</button>
-          </form>
-          <p id="command-help">例：J1 30 J2 -45、move 0 -30 60 0 45 0、home、ready、serve、tease、open、close，也可以输入“递给我 / 躲开 / 回零”。</p>
+          <span class="eyebrow">TASK</span>
+          <h2 id="task-state">自动搬运中</h2>
+          <p id="task-detail">拖动中间场景里的蓝色手掌，尝试干预 GoFa 的搬运路径。</p>
+          <div class="progress-track"><i id="task-progress"></i></div>
         </section>
 
         <section class="glass-card">
-          <span class="eyebrow">PRESETS</span>
-          <div class="preset-grid">
-            <button data-command="home">home</button>
-            <button data-command="ready">ready</button>
-            <button data-command="serve">serve</button>
-            <button data-command="tease">tease</button>
-            <button data-command="open">open</button>
-            <button data-command="close">close</button>
-          </div>
+          <span class="eyebrow">CONCEPT</span>
+          <ul class="brief-list">
+            <li><b>1</b><span>传统工业逻辑：人进入工作区，机械臂急停。</span></li>
+            <li><b>2</b><span>本演示逻辑：人进入工作区，GoFa 保持任务节奏并柔顺改道。</span></li>
+            <li><b>3</b><span>拖动手掌越靠近搬运路径，机械臂越明显地抬腕、侧让、减速。</span></li>
+          </ul>
         </section>
 
-        <section class="glass-card log-card">
-          <span class="eyebrow">BACKEND LOG</span>
-          <ol id="command-log"></ol>
+        <section class="glass-card compact">
+          <span class="eyebrow">WORKSPACE</span>
+          <h3 id="risk-state">Clear</h3>
+          <p id="risk-detail">蓝色手掌未进入 GoFa 的主动避让区域。</p>
         </section>
       </aside>
 
-      <section id="scene" aria-label="GoFa six axis command stage">
+      <section id="scene" aria-label="GoFa flexible collaboration scene">
         <canvas id="stage-canvas"></canvas>
       </section>
 
       <aside class="panel right-panel">
         <section class="glass-card telemetry">
           <span class="eyebrow">LIVE STATE</span>
-          <div class="big-state" id="state-label">idle</div>
+          <div class="big-state" id="mode-label">auto task</div>
           <div class="meter">
-            <span>Last command</span>
-            <strong id="last-command">home</strong>
-            <i><em id="motion-bar"></em></i>
+            <span>Human proximity</span>
+            <strong id="proximity-label">0%</strong>
+            <i><em id="proximity-bar"></em></i>
           </div>
         </section>
 
         <section class="glass-card axis-panel">
-          <span class="eyebrow">JOINT TARGETS</span>
+          <span class="eyebrow">J1-J6 MANUAL OFFSETS</span>
+          <p class="panel-note">滑块会叠加到自动搬运任务上，用来手动微调每个轴。</p>
           <div id="axis-list"></div>
         </section>
 
         <section class="glass-card metric-grid">
           <div>
+            <span>木块</span>
+            <strong id="block-label">front</strong>
+          </div>
+          <div>
+            <span>策略</span>
+            <strong id="strategy-label">normal</strong>
+          </div>
+          <div>
             <span>速度</span>
-            <strong id="speed-label">90</strong>
+            <strong id="speed-label">100%</strong>
           </div>
           <div>
-            <span>夹爪</span>
-            <strong id="gripper-label">closed</strong>
-          </div>
-          <div>
-            <span>控制源</span>
-            <strong>API</strong>
-          </div>
-          <div>
-            <span>轴数</span>
-            <strong>6</strong>
+            <span>控制</span>
+            <strong>sliders</strong>
           </div>
         </section>
       </aside>
