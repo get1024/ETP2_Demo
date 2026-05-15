@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GoFa CRB 15000 Diagnostics Demo</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div>
+          <h1>ABB-inspired Robot Diagnostics Demo</h1>
+          <p>GoFa CRB 15000 / 模型展示界面</p>
+        </div>
+        <nav aria-label="Demo state">
+          <span>GoFa CRB 15000 Demo</span>
+          <span>Automatic</span>
+          <span>Motors On</span>
+          <span>Station A</span>
+          <strong>Status: Model Loaded</strong>
+        </nav>
+      </header>
+
+      <main class="workspace">
+        <aside class="left-panel">
+          <div class="icon-row">
+            <button title="Home">⌂</button>
+            <button class="active" title="Diagnostics">▣</button>
+            <button title="Signal">⌁</button>
+            <button title="Logs">☷</button>
+          </div>
+
+          <section>
+            <span class="eyebrow">ERROR INPUT</span>
+            <h2>故障输入</h2>
+            <label for="fault-code">错误码输入</label>
+            <input id="fault-code" value="10034" />
+            <button class="primary">▷ 开始诊断</button>
+          </section>
+
+          <section>
+            <h3>快捷错误码</h3>
+            <ul class="fault-list">
+              <li><b>20456</b><span>夹爪未正常闭合</span></li>
+              <li><b>50421</b><span>坐标系冲突 / 目标点不可达</span></li>
+              <li><b>40012</b><span>电机负载过高</span></li>
+              <li><b>30105</b><span>急停被触发</span></li>
+              <li class="selected"><b>10034</b><span>通信中断</span></li>
+              <li><b>60201</b><span>电池电压偏低</span></li>
+            </ul>
+          </section>
+
+          <section class="device">
+            <h3>设备信息</h3>
+            <dl>
+              <dt>Robot</dt><dd>GoFa CRB 15000</dd>
+              <dt>Controller</dt><dd>OmniCore Demo</dd>
+              <dt>Mode</dt><dd>Auto</dd>
+              <dt>Status</dt><dd class="danger">Fault</dd>
+              <dt>Source</dt><dd>STEP CAD model</dd>
+            </dl>
+          </section>
+        </aside>
+
+        <section class="scene-panel">
+          <div class="scene-header">
+            <div>
+              <span class="eyebrow">3D MODEL VIEWER</span>
+              <h2>GoFa CRB 15000 故障可视化</h2>
+            </div>
+            <div class="actions">
+              <button id="fit-view">◎ 全局视角</button>
+              <button id="focus-model">⌖ 聚焦模型</button>
+              <button id="toggle-grid">▦ 隐藏网格</button>
+              <button id="reset-view">↻ 重置视图</button>
+            </div>
+          </div>
+          <div id="scene">
+            <div class="callout">
+              <b>通信中断</b>
+              <span>Fieldbus heartbeat</span>
+            </div>
+            <div class="status-pill left">Fault target: communication</div>
+            <div class="status-pill center">Risk: 中风险</div>
+            <div class="status-pill right">GoFa CRB 15000 Cell</div>
+          </div>
+        </section>
+
+        <aside class="right-panel">
+          <section>
+            <span class="eyebrow">DIAGNOSIS RESULT</span>
+            <h2>故障诊断结果 <strong>Error 10034</strong></h2>
+            <p class="muted">GoFa CRB 15000 Demo Cell</p>
+            <h3>通信中断</h3>
+            <dl>
+              <dt>模块</dt><dd>网络通信 / Fieldbus</dd>
+              <dt>状态</dt><dd>Fault</dd>
+              <dt>风险</dt><dd>中风险</dd>
+            </dl>
+          </section>
+
+          <section class="accent">
+            <h3>风险与影响 <strong>中风险</strong></h3>
+            <p>控制柜与外部设备或上位系统通信丢失，自动节拍无法继续。</p>
+          </section>
+
+          <section>
+            <h3>可能原因</h3>
+            <ol class="reason-list">
+              <li><span>1</span>网络线缆、交换机端口异常</li>
+              <li><span>2</span>外部 PLC 或视觉站未启动</li>
+              <li><span>3</span>IP 地址或设备名称配置不一致</li>
+              <li><span>4</span>系统配置文件与实际设备不匹配</li>
+            </ol>
+          </section>
+
+          <section>
+            <h3>处理步骤 <strong>0%</strong></h3>
+            <ol class="steps">
+              <li><span>Now</span>检查控制柜网线和交换机端口</li>
+              <li><span>Todo</span>确认 PLC、视觉系统处于在线状态</li>
+              <li><span>Todo</span>核对控制柜与外部设备 IP</li>
+              <li><span>Todo</span>恢复通信后重新握手</li>
+            </ol>
+          </section>
+
+          <section>
+            <h3>处理结果与模式</h3>
+            <div class="decision">
+              <button class="ok">已恢复</button>
+              <button class="bad">未解决</button>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
