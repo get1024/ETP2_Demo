@@ -1,47 +1,45 @@
-# ETP2 GoFa CRB 15000 Demo
+# ETP2 YuMi MuJoCo Demo
 
-一个轻量的 ABB GoFa CRB 15000 三维展示页面。当前阶段只做模型呈现，不包含机械臂控制、动作规划或物理仿真。
+这个文件夹只保留 ABB YuMi 的 Python / MuJoCo 仿真原型，用来直接读取 YuMi 模型、设置关节角度，并在 MuJoCo viewer 中观察双臂动作。
+
+GoFa 的 Three.js 演示已经移到同级目录：
+
+```text
+../GoFa Demo/
+```
 
 ## What Is Included
 
-- `gofa-viewer/`: Vite + Three.js 前端展示页
-- `gofa-viewer/public/models/gofa-crb15000.glb`: 已从 ABB STEP CAD 装配转换出的浏览器模型
-- `gofa-viewer/tools/convert-step-to-glb.mjs`: STEP 转 GLB 的本地转换脚本
+- `yumi_mujoco_demo.py`: YuMi MuJoCo 仿真入口
+- `yumi/`: ABB YuMi ROS/URDF 模型与网格资源
+- `pyproject.toml`: Python 项目配置
+- `uv.lock`: `uv` 锁定文件
+- `.generated/`: 运行时生成的 MuJoCo 友好 URDF 和 STL 复制件
 
-原始 ABB CAD zip、临时 STEP 文件、`node_modules`、构建产物和旧 YuMi/MuJoCo 原型文件不会提交到仓库。
-
-## Run
-
-```bash
-cd gofa-viewer
-pnpm install
-pnpm dev
-```
-
-打开终端输出里的本地地址，默认是：
-
-```text
-http://127.0.0.1:5173/
-```
-
-## Build
+## Setup
 
 ```bash
-cd gofa-viewer
-pnpm build
+cd "/Users/ryanjoy/Desktop/Project/工程技术实践II/ETP2_Demo"
+uv sync
 ```
 
-## Regenerate The Model
-
-如果需要从原始 STEP 重新生成 GLB，把 ABB 的完整装配 STEP 放到：
-
-```text
-gofa-viewer/tmp_step/CRB15000_12kg-127_Omnicore_rev00_ASM_CAD.STEP
-```
-
-然后运行：
+## Run Headless Check
 
 ```bash
-cd gofa-viewer
-pnpm convert
+uv run python yumi_mujoco_demo.py --headless --duration 0.2 --list-joints
+```
+
+## Run GUI
+
+macOS 下 MuJoCo 图形窗口建议使用 `mjpython`：
+
+```bash
+.venv/bin/mjpython yumi_mujoco_demo.py
+```
+
+如果 `.venv/bin/mjpython` 报旧路径的 `bad interpreter`，说明虚拟环境是在旧文件夹里生成的，直接重建：
+
+```bash
+rm -rf .venv
+uv sync
 ```

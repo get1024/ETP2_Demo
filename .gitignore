@@ -13,16 +13,7 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Node / Vite
-node_modules/
-**/node_modules/
-dist/
-**/dist/
-.vite/
-**/.vite/
-coverage/
-
-# Python / old MuJoCo prototype artifacts
+# Python / MuJoCo local artifacts
 .venv/
 __pycache__/
 **/__pycache__/
@@ -30,34 +21,6 @@ __pycache__/
 *.egg-info/
 .generated/
 
-# Legacy YuMi demo kept locally only; the GitHub repo is for GoFa display.
+# Large local YuMi model assets and generated lock/env files can stay local.
 yumi/
-yumi_mujoco_demo.py
-pyproject.toml
-uv.lock
 pybullet_quickstartguide.pdf
-
-# ABB CAD downloads and temporary CAD conversion inputs.
-# Keep the converted lightweight GLB in gofa-viewer/public/models instead.
-GoFa-CRB-15000/
-gofa-viewer/tmp_step/
-*.zip
-*.STEP
-*.step
-*.STP
-*.stp
-*.IGS
-*.igs
-*.IGES
-*.iges
-*.sat
-*.SAT
-*.x_b
-*.cgr
-*.dwg
-*.DWG
-*.dxf
-*.DXF
-
-# Local verification captures
-gofa-viewer/gofa-viewer-screenshot.png
