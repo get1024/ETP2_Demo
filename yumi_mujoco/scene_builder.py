@@ -9,12 +9,19 @@ TABLE_TOP_Z = 0.34
 
 
 def build_workstation_scene(spec: mujoco.MjSpec) -> None:
+    configure_visual(spec)
     add_floor(spec)
     add_background_wall(spec)
     add_lights(spec)
     add_cameras(spec)
     add_workbench(spec)
     add_demo_objects(spec)
+
+
+def configure_visual(spec: mujoco.MjSpec) -> None:
+    """Disable default headlight and set shadow quality."""
+    spec.visual.headlight.active = 0
+    spec.visual.quality.shadowsize = 4096
 
 
 def add_floor(spec: mujoco.MjSpec) -> None:
@@ -38,19 +45,14 @@ def add_background_wall(spec: mujoco.MjSpec) -> None:
 
 
 def add_lights(spec: mujoco.MjSpec) -> None:
+    """Consolidated lighting: Increased intensity to compensate for disabled headlight."""
     spec.worldbody.add_light(
-        name="studio_key_light",
-        pos=[0.1, -2.0, 2.8],
-        dir=[-0.05, 0.55, -1.0],
-        diffuse=[0.85, 0.82, 0.76],
-        ambient=[0.25, 0.25, 0.25],
-    )
-    spec.worldbody.add_light(
-        name="studio_fill_light",
-        pos=[1.3, 1.4, 1.7],
-        dir=[-0.7, -0.65, -0.7],
-        diffuse=[0.35, 0.42, 0.48],
-        ambient=[0.08, 0.08, 0.08],
+        name="main_light",
+        pos=[1.0, -1.5, 2.5],
+        dir=[-0.3, 0.5, -1.0],
+        diffuse=[1.0, 1.0, 1.0],  # Increased from 0.8
+        ambient=[0.3, 0.3, 0.3],  # Increased from 0.15 for better visibility in shadows
+        castshadow=True,
     )
 
 
@@ -135,4 +137,3 @@ def add_free_cube(
         mass=mass,
         rgba=rgba,
     )
-
