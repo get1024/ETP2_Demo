@@ -16,3 +16,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["yumi_mujoco_demo"]
+packages = ["yumi_mujoco"]
