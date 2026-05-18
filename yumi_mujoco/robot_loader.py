@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -27,6 +29,25 @@ def _find_mesh(relative_path: str) -> Path:
     raise FileNotFoundError(f"Cannot find mesh '{relative_path}'. Searched: {searched}")
 
 
+def _atomic_copy(source: Path, target: Path) -> None:
+    if target.exists() and target.stat().st_size == source.stat().st_size:
+        return
+
+    fd, tmp_name = tempfile.mkstemp(
+        dir=target.parent,
+        prefix=f"{target.name}.",
+        suffix=".tmp",
+    )
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        shutil.copy2(source, tmp_path)
+        tmp_path.replace(target)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
 def prepare_mujoco_urdf() -> Path:
     """Create a MuJoCo-friendly URDF copy without touching the ROS source tree."""
     if not SOURCE_URDF.exists():
@@ -35,7 +56,7 @@ def prepare_mujoco_urdf() -> Path:
     GENERATED_DIR.mkdir(exist_ok=True)
     for relative_path in MESH_FILES:
         source = _find_mesh(relative_path)
-        shutil.copy2(source, GENERATED_DIR / source.name)
+        _atomic_copy(source, GENERATED_DIR / source.name)
 
     tree = ET.parse(SOURCE_URDF)
     root = tree.getroot()
@@ -48,7 +69,19 @@ def prepare_mujoco_urdf() -> Path:
             # generated URDF directory, so keep mesh filenames flat and local.
             mesh.attrib["filename"] = Path(filename).name
 
-    tree.write(MUJOCO_URDF, encoding="utf-8", xml_declaration=True)
+    fd, tmp_name = tempfile.mkstemp(
+        dir=GENERATED_DIR,
+        prefix=f"{MUJOCO_URDF.name}.",
+        suffix=".tmp",
+    )
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        tree.write(tmp_path, encoding="utf-8", xml_declaration=True)
+        tmp_path.replace(MUJOCO_URDF)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
     return MUJOCO_URDF
 
 
@@ -60,4 +93,3 @@ def load_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
     data = mujoco.MjData(model)
     mujoco.mj_forward(model, data)
     return model, data
-
