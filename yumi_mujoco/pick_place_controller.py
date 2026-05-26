@@ -18,7 +18,7 @@ from .pick_place_scene import (
     set_freejoint_pose,
     update_path_markers,
 )
-from .robot_state import LEFT_ARM, RIGHT_ARM, clamp_to_joint_range, joint_id, qpos_address, set_joint_position
+from .robot_state import LEFT_ARM, RIGHT_ARM, apply_initial_pose, clamp_to_joint_range, joint_id, qpos_address, set_joint_position
 
 
 LEFT_GRIPPERS = ["gripper_l_joint", "gripper_l_joint_m"]
@@ -193,6 +193,7 @@ class PickPlaceController:
 
 def reset_to_home(model: mujoco.MjModel, data: mujoco.MjData) -> None:
     mujoco.mj_resetData(model, data)
+    apply_initial_pose(model, data)
     set_freejoint_pose(model, data, ITEM_JOINT, left_item_position())
     update_path_markers(model, 0.0)
     mujoco.mj_forward(model, data)

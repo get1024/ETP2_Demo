@@ -31,12 +31,14 @@ def run_headless(model: mujoco.MjModel, data: mujoco.MjData, args: argparse.Name
     scenario = make_scenario(args.scenario, model, args.amplitude)
     start = time.time()
     last = start
+    sim_time = 0.0
     while True:
         now = time.time()
         elapsed = now - start
         dt = min(0.05, now - last) * args.speed
+        sim_time += dt
         last = now
-        scenario.update(model, data, elapsed * args.speed, dt)
+        scenario.update(model, data, sim_time, dt)
         if args.duration and elapsed >= args.duration:
             break
         if not args.duration:
@@ -60,12 +62,14 @@ def run_viewer(model: mujoco.MjModel, data: mujoco.MjData, args: argparse.Namesp
 
             start = time.time()
             last = start
+            sim_time = 0.0
             while viewer.is_running():
                 now = time.time()
                 elapsed = now - start
                 dt = min(0.05, now - last) * args.speed
+                sim_time += dt
                 last = now
-                scenario.update(model, data, elapsed * args.speed, dt)
+                scenario.update(model, data, sim_time, dt)
                 viewer.sync()
                 if args.duration and elapsed >= args.duration:
                     break

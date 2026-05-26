@@ -57,7 +57,7 @@ class HumanProxy:
         set_freejoint_pose(model, data, HUMAN_JOINT, np.array([x, HUMAN_Y, z]), np.array([1.0, 0.0, 0.0, 0.0]))
         self.risk_level = self._risk_level(x)
         self.risk = self.risk_level > 0.08
-        self.prediction_visible = show_prediction and cycle_t < 4.7
+        self.prediction_visible = show_prediction and cycle_t < 4.85
         self._update_prediction_positions(model, x)
         self._set_prediction_alpha(model, 0.45 if self.prediction_visible else 0.0)
         return self.risk
